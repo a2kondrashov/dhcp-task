@@ -10,7 +10,7 @@
     - name: Print DHCP server IP address
       ansible.builtin.debug:
         msg:
-          - "DHCP server OS         : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "DHCP server OS          : {{ ansible_distribution }} {{ ansible_distribution_version }}"
           - "DHCP client IP address  : {{ hostvars[inventory_hostname]['ansible_' ~ eth_device]['ipv4']['address'] }}"
       when: hostvars[inventory_hostname]['ansible_' ~ eth_device]['ipv4']['address'] is defined
 
