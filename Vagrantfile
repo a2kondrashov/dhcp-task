@@ -7,7 +7,7 @@ Vagrant.configure("2") do |config|
   # Please pay attention. First host in the list will configured as DHCP server!
   BOX_IMAGES = ["debian11","debian10","debian11","debian12"]
   # Specify a desired DHCP range.
-  # Work only with /24 subnets. Please avoid to use 10.0.2.0/24 subnet!
+  # It works with /24 subnets only. Please avoid to use 10.0.2.0/24 subnet!
   DHCP_RANGE = "192.168.0.137-192.168.0.145"
   DHCP_NETMASK = "255.255.255.0"
   DHCP_LEASETIME = "12h"
