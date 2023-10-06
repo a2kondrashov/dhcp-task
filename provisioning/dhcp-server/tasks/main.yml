@@ -1,0 +1,46 @@
+---
+# tasks file for dhcp-server
+
+# Get name of 2nd ethernet device
+- name: Get name of 2nd ethernet interface from shell
+  changed_when: false
+  ansible.builtin.shell: "networkctl list | sed -n '4'p | awk '{print$2}'"
+  register: shell_out
+
+# - debug: msg="{{ shell_out.stdout }}"
+
+- name: Setting fact
+  ansible.builtin.set_fact:
+    eth_device: "{{ shell_out.stdout }}"
+
+- name: Update repo and install "dnsmasq","resolvconf"
+  ansible.builtin.apt:
+    name:
+      - dnsmasq
+      - resolvconf
+    update_cache: true
+    state: present
+
+- name: Get the list of services
+  ansible.builtin.service_facts:
+
+- name: Make sure "systemd-resolved" is stopped
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: false
+  when: "'systemd-resolved' in services"
+
+- name: Set "dnsmasq" configuration file
+  ansible.builtin.template:
+    src: 01-dnsmasq.conf.j2
+    dest: /etc/dnsmasq.d/01-dnsmasq.conf
+    mode: "0644"
+  notify:
+    - Restart "dnsmasq"
+
+- name: Make sure "dnsmasq" is running
+  ansible.builtin.service:
+    name: dnsmasq
+    state: started
+    enabled: true

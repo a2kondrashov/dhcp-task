@@ -1,0 +1,10 @@
+# dnsmasq config
+
+interface="{{ eth_device }}"
+port=53
+dhcp-option=3
+dhcp-option=6
+dhcp-option=1,{{ dhcp_subnet_mask }}
+server=8.8.8.8
+server=1.1.1.1
+dhcp-range={{ dhcp_start_range }},{{ dhcp_end_range }},{{ dhcp_lease_time }}

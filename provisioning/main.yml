@@ -1,0 +1,61 @@
+---
+- name: Configure DHCP server
+  hosts: dhcp_servers
+  become: true
+  roles:
+    - dhcp-server
+
+  post_tasks:
+
+    - name: Print DHCP server IP address
+      ansible.builtin.debug:
+        msg:
+          - "DHCP server OS         : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "DHCP client IP address  : {{ hostvars[inventory_hostname]['ansible_' ~ eth_device]['ipv4']['address'] }}"
+      when: hostvars[inventory_hostname]['ansible_' ~ eth_device]['ipv4']['address'] is defined
+
+    - name: Print DHCP defined range and lease time
+      ansible.builtin.debug:
+        msg:
+          - "DHCP, IP range {{ dhcp_start_range }} -- {{ dhcp_end_range }}, subnet mask {{ dhcp_subnet_mask }}, lease time {{ dhcp_lease_time }}"
+
+- name: Configure DHCP clients
+  hosts: dhcp_clients
+  become: true
+  roles:
+    - dhcp-client
+
+  post_tasks:
+
+    - name: Refresh IP on clients if DHCP range is changed on the server
+      block:
+
+        - name: Use 'dhclient' to obtain an actual IP address
+          # changed_when: false
+          ansible.builtin.shell: dhclient -r {{ eth_device }} && sleep 2 && dhclient {{ eth_device }}
+          when: >
+                (ansible_distribution == 'Debian' and ansible_distribution_major_version|int < 12)
+                or ansible_distribution == 'Ubuntu'
+
+        - name: Use 'ip' to obtain an actual IP address (Debian >= 12)
+          # changed_when: false
+          ansible.builtin.shell: ip link set {{ eth_device }} down && sleep 2 && ip link set {{ eth_device }} up
+          when: ansible_distribution == 'Debian' and ansible_distribution_major_version|int >= 12
+
+        - name: Make sure DHCP client has time to obtain IP address
+          ansible.builtin.pause:
+            seconds: 25
+
+        - name: Refresh 'ansible_facts'
+          ansible.builtin.setup:
+
+      when: >
+            hostvars[inventory_hostname]['ansible_' ~ eth_device]['ipv4']['address'].split('.')[3]|int < dhcp_start_range.split('.')[3]|int
+            or hostvars[inventory_hostname]['ansible_' ~ eth_device]['ipv4']['address'].split('.')[3]|int > dhcp_end_range.split('.')[3]|int
+
+    - name: Print DHCP client IP address
+      ansible.builtin.debug:
+        msg:
+          - "DHCP client OS          : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "DHCP client IP address  : {{ hostvars[inventory_hostname]['ansible_' ~ eth_device]['ipv4']['address'] }}"
+      when: hostvars[inventory_hostname]['ansible_' ~ eth_device]['ipv4']['address'] is defined
