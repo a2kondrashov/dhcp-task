@@ -13,28 +13,49 @@
   ansible.builtin.set_fact:
     eth_device: "{{ shell_out.stdout }}"
 
-- name: Remove /etc/network/interfaces
-  ansible.builtin.file:
-    path: /etc/network/interfaces
-    state: absent
+- name: Take care about /etc/network/interfaces on Debian
+  block:
 
-- name: Copy DHCP config for clients [ethX]
-  ansible.builtin.copy:
-    src: 01-dhcp-eth.network
-    dest: /etc/systemd/network/01-dhcp-eth.network
+    - name: Get '/etc/network/interfaces' file stat
+      ansible.builtin.stat:
+        path: /etc/network/interfaces
+      register: interfaces_file
+
+    - name: Copy /etc/network/interfaces
+      ansible.builtin.copy:
+        src: interfaces
+        dest: /etc/network/interfaces
+        mode: '0644'
+        backup: yes
+      when: interfaces_file.stat.exists
+
+  when: ansible_distribution == 'Debian'
+
+- name: Copy interface config for DHCP clients
+  ansible.builtin.template:
+    src: 01-dhcp.network.j2
+    dest: /etc/systemd/network/01-dhcp.network
     mode: '0644'
-  when: "'eth' in eth_device"
   notify:
     - Restart systemd-networkd
 
-- name: Copy DHCP config for clients [enp0sX]
-  ansible.builtin.copy:
-    src: 01-dhcp-enp.network
-    dest: /etc/systemd/network/01-dhcp-enp.network
-    mode: '0644'
-  when: "'enp' in eth_device"
-  notify:
-    - Restart systemd-networkd
+# - name: Copy DHCP config for clients [ethX]
+#   ansible.builtin.copy:
+#     src: 01-dhcp-eth.network
+#     dest: /etc/systemd/network/01-dhcp-eth.network
+#     mode: '0644'
+#   when: "'eth' in eth_device"
+#   notify:
+#     - Restart systemd-networkd
+
+# - name: Copy DHCP config for clients [enp0sX]
+#   ansible.builtin.copy:
+#     src: 01-dhcp-enp.network
+#     dest: /etc/systemd/network/01-dhcp-enp.network
+#     mode: '0644'
+#   when: "'enp' in eth_device"
+#   notify:
+#     - Restart systemd-networkd
 
 - name: Make sure "systemd-networkd" is enabled
   ansible.builtin.systemd:

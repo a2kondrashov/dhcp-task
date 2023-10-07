@@ -1,0 +1,14 @@
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+
+# The primary network interface
+allow-hotplug eth0
+auto lo
+iface lo inet loopback
+iface eth0 inet dhcp
+dns-nameserver 10.0.2.3
+pre-up sleep 2
